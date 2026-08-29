@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Digital Pookkalam — Onam Flower Rangoli</title>
+<style>
+  :root { --bg1:#1a0f2e; --bg2:#2d1b4e; --panel-bg: rgba(255,255,255,0.06); }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    min-height: 100vh;
+    background: radial-gradient(ellipse at center, var(--bg2) 0%, var(--bg1) 100%);
+    font-family: 'Segoe UI', Tahoma, sans-serif;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 24px 16px 60px; color: #fdf6e3; overflow-x: hidden;
+  }
+  h1 {
+    font-size: 1.8rem;
+    background: linear-gradient(90deg, #ffd166, #ef476f, #06d6a0, #ffd166);
+    background-size: 300% auto; -webkit-background-clip: text; background-clip: text;
+    color: transparent; animation: shine 6s linear infinite;
+    text-align: center; margin-bottom: 4px;
+  }
+  @keyframes shine { to { background-position: 300% center; } }
+  .subtitle { opacity: 0.7; font-size: 0.9rem; margin-bottom: 20px; text-align: center; }
+
+  #stage {
+    position: relative;
+    width: min(94vw, 600px);
+    aspect-ratio: 1 / 1;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 20px;
+    cursor: pointer;
+    border-radius: 12px;
+    background: radial-gradient(ellipse at center, #c9bfae 0%, #8f8577 100%);
+    box-shadow: inset 0 0 60px rgba(0,0,0,0.35), 0 0 40px rgba(0,0,0,0.35);
+  }
+  svg#pookkalam { width: 94%; height: 94%; display: block; }
+
+  #ring { transform-origin: 300px 300px; }
+  .spin { animation: rotate var(--speed, 40s) linear infinite; }
+  @keyframes rotate { to { transform: rotate(360deg); } }
+
+  .hint { font-size: 0.8rem; opacity: 0.55; margin-bottom: 24px; text-align: center; }
+
+  .panel {
+    width: min(94vw, 600px);
+    background: var(--panel-bg);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 16px; padding: 18px 20px; backdrop-filter: blur(6px);
+  }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
+  .row:last-child { margin-bottom: 0; }
+  label { font-size: 0.85rem; opacity: 0.85; min-width: 100px; }
+  input[type="range"] { flex: 1; accent-color: #ef476f; }
+
+  .palette-group { display: flex; gap: 8px; flex-wrap: wrap; }
+  .swatch {
+    width: 34px; height: 34px; border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.3);
+    cursor: pointer; transition: transform 0.2s ease, border-color 0.2s ease;
+  }
+  .swatch:hover { transform: scale(1.15); }
+  .swatch.active { border-color: #fff; transform: scale(1.15); }
+
+  button.action {
+    background: linear-gradient(135deg, #ef476f, #ffd166);
+    border: none; color: #1a0f2e; font-weight: 700;
+    padding: 10px 18px; border-radius: 999px; cursor: pointer;
+    font-size: 0.85rem; transition: transform 0.15s ease;
+  }
+  button.action:active { transform: scale(0.95); }
+
+  footer { margin-top: 22px; font-size: 0.75rem; opacity: 0.5; text-align: center; }
+</style>
+</head>
+<body>
+
+  <h1>Digital Pookkalam</h1>
+  <div class="subtitle">Onam flower rangoli, made of code 🌸</div>
+
+  <div id="stage" title="Click the design to reshape it">
+    <svg id="pookkalam" viewBox="0 0 600 600"></svg>
+  </div>
+  <div class="hint">Tap / click the pookkalam to reshape it · use the controls below to customize</div>
+
+  <div class="panel">
+    <div class="row">
+      <label for="petals">Petals</label>
+      <input type="range" id="petals" min="6" max="12" value="8">
+      <span id="petalsVal">8</span>
+    </div>
+    <div class="row">
+      <label for="swirl">Swirl</label>
+      <input type="range" id="swirl" min="5" max="35" value="20">
+      <span id="swirlVal">20</span>
+    </div>
+    <div class="row">
+      <label for="speed">Spin speed</label>
+      <input type="range" id="speed" min="0" max="100" value="0">
+    </div>
+    <div class="row">
+      <label>Palette</label>
+      <div class="palette-group" id="paletteGroup"></div>
+    </div>
+    <div class="row" style="justify-content:center; gap:16px;">
+      <button class="action" id="randomizeBtn">🎲 Randomize</button>
+      <button class="action" id="downloadBtn">⬇ Save as SVG</button>
+    </div>
+  </div>
+
+  <footer>Built for Code-a-Pookkalam · pure HTML/CSS/SVG/JS, no dependencies</footer>
+
+<script>
+(function () {
+  const svg = document.getElementById('pookkalam');
+  const CX = 300, CY = 300;
+  const NS = 'http://www.w3.org/2000/svg';
+
+  const palettes = {
+    onam: {
+      green: '#7fb519', dash1: '#fdf6e3', dash2: '#7a0a1c',
+      yellow: '#ffc107', orange: '#f4820a', maroon: '#6e0a12',
+      outerPinwheel: ['#8e2c8f', '#e0468a', '#f4820a', '#c9a13b', '#9a8fc7', '#6e0a12', '#fdf6e3', '#a55c2e'],
+      innerPinwheel: ['#7fb519', '#e0468a', '#c9a13b', '#8e2c8f', '#f4820a', '#fdf6e3', '#9a8fc7', '#a55c2e'],
+      centerRing: '#6e0a12', centerBg: '#fdf6e3', centerMid: '#ffc107', pom: '#e6362a'
+    },
+    marigold: {
+      green: '#5f8c1f', dash1: '#fff3d6', dash2: '#7a3d00',
+      yellow: '#ffd60a', orange: '#ff8c00', maroon: '#7a2b00',
+      outerPinwheel: ['#ff8c00', '#ffd60a', '#a33d00', '#fff3d6', '#e0468a', '#7a3d00', '#c9a13b', '#5f8c1f'],
+      innerPinwheel: ['#ffd60a', '#a33d00', '#fff3d6', '#ff8c00', '#5f8c1f', '#e0468a', '#c9a13b', '#7a3d00'],
+      centerRing: '#7a2b00', centerBg: '#fff3d6', centerMid: '#ffd60a', pom: '#e6362a'
+    },
+    lotus: {
+      green: '#2f7a4f', dash1: '#ffe0ec', dash2: '#5a0a3a',
+      yellow: '#f2c14e', orange: '#e0468a', maroon: '#5a0a3a',
+      outerPinwheel: ['#c77dff', '#ff8fb1', '#7209b7', '#ffe0ec', '#e0468a', '#5a0a3a', '#f2c14e', '#9a8fc7'],
+      innerPinwheel: ['#ff8fb1', '#7209b7', '#f2c14e', '#c77dff', '#2f7a4f', '#ffe0ec', '#e0468a', '#5a0a3a'],
+      centerRing: '#5a0a3a', centerBg: '#ffe0ec', centerMid: '#f2c14e', pom: '#e6362a'
+    },
+    kerala: {
+      green: '#1b5e20', dash1: '#fefae0', dash2: '#5a0e0e',
+      yellow: '#ffd60a', orange: '#f77f00', maroon: '#5a0e0e',
+      outerPinwheel: ['#d90429', '#ffd60a', '#5a189a', '#fefae0', '#f77f00', '#5a0e0e', '#e0468a', '#9a8fc7'],
+      innerPinwheel: ['#ffd60a', '#5a189a', '#fefae0', '#d90429', '#1b5e20', '#f77f00', '#e0468a', '#5a0e0e'],
+      centerRing: '#5a0e0e', centerBg: '#fefae0', centerMid: '#ffd60a', pom: '#e6362a'
+    }
+  };
+  let currentPalette = 'onam';
+  const state = { petals: 8, swirl: 20, speed: 0 };
+
+  function el(tag, attrs) {
+    const e = document.createElementNS(NS, tag);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    return e;
+  }
+  function polar(cx, cy, r, angleDeg) {
+    const rad = (angleDeg - 90) * Math.PI / 180;
+    return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+  }
+
+  // solid annulus ring (donut band) between rInner and rOuter
+  function ringBand(rOuter, rInner, color) {
+    const midR = (rOuter + rInner) / 2;
+    return el('circle', { cx: CX, cy: CY, r: midR, fill: 'none', stroke: color, 'stroke-width': (rOuter - rInner) });
+  }
+
+  // alternating dashed ring made of short donut segments
+  function dashRing(rOuter, rInner, colorA, colorB) {
+    const g = el('g');
+    const segCount = 40;
+    const step = 360 / segCount;
+    const segSpan = step * 0.6; // gap between dashes
+    for (let i = 0; i < segCount; i++) {
+      if (i % 2 === 2 % 2 && i % 4 >= 2) continue; // create rhythmic gaps
+      const a0 = i * step;
+      const a1 = a0 + segSpan;
+      const color = (Math.floor(i / 2) % 2 === 0) ? colorA : colorB;
+      const p1 = polar(CX, CY, rInner, a0), p2 = polar(CX, CY, rOuter, a0);
+      const p3 = polar(CX, CY, rOuter, a1), p4 = polar(CX, CY, rInner, a1);
+      const large = segSpan > 180 ? 1 : 0;
+      const d = `M ${p1.x} ${p1.y} L ${p2.x} ${p2.y} A ${rOuter} ${rOuter} 0 ${large} 1 ${p3.x} ${p3.y} L ${p4.x} ${p4.y} A ${rInner} ${rInner} 0 ${large} 0 ${p1.x} ${p1.y} Z`;
+      g.appendChild(el('path', { d, fill: color }));
+    }
+    return g;
+  }
+
+  // swirled pinwheel wedge: curved radial edges bowed by `bow` degrees for a paisley/pinwheel look
+  function swirlWedge(rInner, rOuter, angleStart, angleEnd, bow, color) {
+    const midR = (rInner + rOuter) / 2;
+    const pInnerStart = polar(CX, CY, rInner, angleStart);
+    const pOuterStart = polar(CX, CY, rOuter, angleStart + bow);
+    const pOuterEnd = polar(CX, CY, rOuter, angleEnd + bow);
+    const pInnerEnd = polar(CX, CY, rInner, angleEnd);
+    const ctrl1 = polar(CX, CY, midR, angleStart + bow * 0.65);
+    const ctrl2 = polar(CX, CY, midR, angleEnd + bow * 0.65);
+    const span = angleEnd - angleStart;
+    const large = span > 180 ? 1 : 0;
+    const d = `M ${pInnerStart.x} ${pInnerStart.y}
+      Q ${ctrl1.x} ${ctrl1.y} ${pOuterStart.x} ${pOuterStart.y}
+      A ${rOuter} ${rOuter} 0 ${large} 1 ${pOuterEnd.x} ${pOuterEnd.y}
+      Q ${ctrl2.x} ${ctrl2.y} ${pInnerEnd.x} ${pInnerEnd.y}
+      A ${rInner} ${rInner} 0 ${large} 0 ${pInnerStart.x} ${pInnerStart.y} Z`;
+    return el('path', { d, fill: color });
+  }
+
+  function pinwheel(rInner, rOuter, n, bow, rotOffset, colors) {
+    const g = el('g');
+    const step = 360 / n;
+    for (let i = 0; i < n; i++) {
+      const a0 = rotOffset + i * step;
+      const a1 = a0 + step;
+      g.appendChild(swirlWedge(rInner, rOuter, a0, a1, bow, colors[i % colors.length]));
+    }
+    return g;
+  }
+
+  // a single rounded flower petal: narrow point at rInner, rounded fanned tip at rOuter,
+  // filled with concentric colour bands, outlined in black to match a real pookkalam petal
+  function flowerPetal(rInner, rOuter, angleStart, angleEnd, bandColors, strokeColor) {
+    const g = el('g');
+    const am = (angleStart + angleEnd) / 2;
+    const halfSpan = (angleEnd - angleStart) / 2;
+    const n = bandColors.length;
+    const taper = t => Math.pow(t, 0.8); // keeps petal narrow near the point, flares near the tip
+
+    for (let i = 0; i < n; i++) {
+      const t0 = i / n, t1 = (i + 1) / n;
+      const r0 = rInner + (rOuter - rInner) * t0;
+      const r1 = rInner + (rOuter - rInner) * t1;
+      const w0 = halfSpan * taper(t0);
+      const w1 = halfSpan * taper(t1);
+      const pA = polar(CX, CY, r0, am - w0);
+      const pB = polar(CX, CY, r1, am - w1);
+      const pC = polar(CX, CY, r1, am + w1);
+      const pD = polar(CX, CY, r0, am + w0);
+      let d;
+      if (i === n - 1) {
+        d = `M ${pA.x} ${pA.y} L ${pB.x} ${pB.y} A ${r1} ${r1} 0 0 1 ${pC.x} ${pC.y} L ${pD.x} ${pD.y} Z`;
+      } else {
+        d = `M ${pA.x} ${pA.y} L ${pB.x} ${pB.y} L ${pC.x} ${pC.y} L ${pD.x} ${pD.y} Z`;
+      }
+      g.appendChild(el('path', { d, fill: bandColors[i] }));
+    }
+
+    // crisp black outline tracing the whole petal silhouette, like the dividers in a real pookkalam
+    const steps = 8;
+    let outlineD = '';
+    for (let s = 0; s <= steps; s++) {
+      const t = s / steps;
+      const r = rInner + (rOuter - rInner) * t;
+      const w = halfSpan * taper(t);
+      const p = polar(CX, CY, r, am - w);
+      outlineD += (s === 0 ? 'M ' : 'L ') + p.x + ' ' + p.y + ' ';
+    }
+    const pTipOuter = polar(CX, CY, rOuter, am + halfSpan);
+    outlineD += `A ${rOuter} ${rOuter} 0 0 1 ${pTipOuter.x} ${pTipOuter.y} `;
+    for (let s = steps; s >= 0; s--) {
+      const t = s / steps;
+      const r = rInner + (rOuter - rInner) * t;
+      const w = halfSpan * taper(t);
+      const p = polar(CX, CY, r, am + w);
+      outlineD += 'L ' + p.x + ' ' + p.y + ' ';
+    }
+    outlineD += 'Z';
+    g.appendChild(el('path', { d: outlineD, fill: 'none', stroke: strokeColor, 'stroke-width': 2.5, 'stroke-linejoin': 'round' }));
+    return g;
+  }
+
+  // ring of rounded, banded petals (the "flower-in-a-flower" core), cycling through colour sets per petal
+  function petalFlower(rInner, rOuter, n, rotOffset, colorSets, strokeColor, gapFraction) {
+    const g = el('g');
+    const step = 360 / n;
+    const span = step * (1 - gapFraction);
+    for (let i = 0; i < n; i++) {
+      const a0 = rotOffset + i * step - span / 2 + step / 2;
+      const a1 = a0 + span;
+      g.appendChild(flowerPetal(rInner, rOuter, a0, a1, colorSets[i % colorSets.length], strokeColor));
+    }
+    return g;
+  }
+
+  // a single pointed, almond-shaped petal — narrow point at both rInner and rOuter, bulging at rMid
+  function starPetal(rInner, rOuter, angle, halfWidthDeg, bulgeT, color, strokeColor) {
+    const rMid = rInner + (rOuter - rInner) * bulgeT;
+    const pTipIn = polar(CX, CY, rInner, angle);
+    const pTipOut = polar(CX, CY, rOuter, angle);
+    const pLeft = polar(CX, CY, rMid, angle - halfWidthDeg);
+    const pRight = polar(CX, CY, rMid, angle + halfWidthDeg);
+    const cLI = polar(CX, CY, rInner + (rMid - rInner) * 0.55, angle - halfWidthDeg * 0.6);
+    const cLO = polar(CX, CY, rMid + (rOuter - rMid) * 0.45, angle - halfWidthDeg * 0.45);
+    const cRO = polar(CX, CY, rMid + (rOuter - rMid) * 0.45, angle + halfWidthDeg * 0.45);
+    const cRI = polar(CX, CY, rInner + (rMid - rInner) * 0.55, angle + halfWidthDeg * 0.6);
+    const d = `M ${pTipIn.x} ${pTipIn.y}
+      Q ${cLI.x} ${cLI.y} ${pLeft.x} ${pLeft.y}
+      Q ${cLO.x} ${cLO.y} ${pTipOut.x} ${pTipOut.y}
+      Q ${cRO.x} ${cRO.y} ${pRight.x} ${pRight.y}
+      Q ${cRI.x} ${cRI.y} ${pTipIn.x} ${pTipIn.y} Z`;
+    return el('path', { d, fill: color, stroke: strokeColor, 'stroke-width': 3, 'stroke-linejoin': 'round' });
+  }
+
+  // a ring of pointed petals meeting at the center, alternating between two colours, like a two-tone starburst flower
+  function starFlower(rInner, rOuter, n, rotOffset, colorA, colorB, strokeColor, bulgeT) {
+    const g = el('g');
+    const step = 360 / n;
+    const halfWidth = step / 2;
+    for (let i = 0; i < n; i++) {
+      const angle = rotOffset + i * step;
+      const color = i % 2 === 0 ? colorA : colorB;
+      g.appendChild(starPetal(rInner, rOuter, angle, halfWidth, bulgeT, color, strokeColor));
+    }
+    return g;
+  }
+
+  function render() {
+    svg.innerHTML = '';
+    const pal = palettes[currentPalette];
+    const group = el('g', { id: 'ring' });
+    group.classList.add('spin');
+    group.style.setProperty('--speed', (110 - state.speed) + 's');
+    if (state.speed === 0) group.classList.remove('spin');
+
+    const R = 272;
+    // band radii, outer to inner
+    const rEdge = R;
+    const rGreen1 = R - R * 0.03;
+    const rDash = rGreen1 - R * 0.06;
+    const rYellow = rDash - R * 0.06;
+    const rOrange = rYellow - R * 0.06;
+    const rMaroon = rOrange - R * 0.06;
+    const rGreen2 = rMaroon - R * 0.025;
+    const rOuterPW = rGreen2 - R * 0.01;
+    const rMidPW = rOuterPW * 0.56;
+    const rGap = rMidPW - R * 0.02;
+    const rInnerPW = rGap;
+    const rCorePW = rInnerPW * 0.42;
+    const rGreen3 = rCorePW - R * 0.015;
+    const rCenterOuter = rGreen3 - R * 0.01;
+
+    // base disc
+    group.appendChild(el('circle', { cx: CX, cy: CY, r: rEdge, fill: pal.maroon }));
+
+    group.appendChild(ringBand(rEdge, rGreen1, pal.green));
+    group.appendChild(dashRing(rGreen1, rDash, pal.dash1, pal.dash2));
+    group.appendChild(ringBand(rDash, rYellow, pal.yellow));
+    group.appendChild(ringBand(rYellow, rOrange, pal.orange));
+    group.appendChild(ringBand(rOrange, rMaroon, pal.maroon));
+    group.appendChild(ringBand(rMaroon, rGreen2, pal.green));
+
+    // outer pinwheel flower
+    group.appendChild(pinwheel(rMidPW, rOuterPW, state.petals, state.swirl, 0, pal.outerPinwheel));
+
+    // small green gap ring
+    group.appendChild(ringBand(rGap + R * 0.015, rGap, pal.green));
+
+    // inner circle — compact self-contained motif matching the reference photo:
+    // black rim -> orange band -> yellow band -> checkered maroon/orange ring -> two-tone starburst flower -> bullseye
+    const R2 = rInnerPW;
+    const rBlackOuter = R2;
+    const rBlackInner = R2 * 0.95;
+    const rOrangeInner = R2 * 0.88;
+    const rYellowInner = R2 * 0.74;
+    const rCheckInner = R2 * 0.60;
+    const rFlowerOuter = rCheckInner;
+    const rFlowerInner = R2 * 0.07;
+    const rBullOuter = R2 * 0.24;
+
+    group.appendChild(ringBand(rBlackOuter, rBlackInner, '#160b08'));
+    group.appendChild(ringBand(rBlackInner, rOrangeInner, pal.orange));
+    group.appendChild(ringBand(rOrangeInner, rYellowInner, pal.yellow));
+    group.appendChild(dashRing(rYellowInner, rCheckInner, pal.dash2, pal.orange));
+
+    group.appendChild(starFlower(rFlowerInner, rFlowerOuter, state.petals, (360 / state.petals) / 2, pal.dash1, pal.green, '#160b08', 0.55));
+
+    // bullseye center, layered like the photo's red-yellow-cream core
+    group.appendChild(el('circle', { cx: CX, cy: CY, r: rBullOuter, fill: pal.orange }));
+    group.appendChild(el('circle', { cx: CX, cy: CY, r: rBullOuter * 0.68, fill: pal.yellow }));
+    group.appendChild(el('circle', { cx: CX, cy: CY, r: rBullOuter * 0.38, fill: pal.dash1 }));
+
+
+    svg.appendChild(group);
+  }
+
+  function buildPalette() {
+    const wrap = document.getElementById('paletteGroup');
+    wrap.innerHTML = '';
+    Object.keys(palettes).forEach(name => {
+      const sw = document.createElement('div');
+      sw.className = 'swatch' + (name === currentPalette ? ' active' : '');
+      const p = palettes[name];
+      sw.style.background = `linear-gradient(135deg, ${p.outerPinwheel[0]}, ${p.outerPinwheel[2]}, ${p.yellow})`;
+      sw.title = name;
+      sw.addEventListener('click', () => {
+        currentPalette = name;
+        document.querySelectorAll('.swatch').forEach(s => s.classList.remove('active'));
+        sw.classList.add('active');
+        render();
+      });
+      wrap.appendChild(sw);
+    });
+  }
+
+  const petalsInput = document.getElementById('petals');
+  const swirlInput = document.getElementById('swirl');
+  const speedInput = document.getElementById('speed');
+
+  petalsInput.addEventListener('input', () => {
+    state.petals = +petalsInput.value;
+    document.getElementById('petalsVal').textContent = state.petals;
+    render();
+  });
+  swirlInput.addEventListener('input', () => {
+    state.swirl = +swirlInput.value;
+    document.getElementById('swirlVal').textContent = state.swirl;
+    render();
+  });
+  speedInput.addEventListener('input', () => {
+    state.speed = +speedInput.value;
+    render();
+  });
+
+  document.getElementById('randomizeBtn').addEventListener('click', () => {
+    state.petals = 6 + Math.floor(Math.random() * 7);
+    state.swirl = 5 + Math.floor(Math.random() * 31);
+    currentPalette = Object.keys(palettes)[Math.floor(Math.random() * Object.keys(palettes).length)];
+    petalsInput.value = state.petals;
+    swirlInput.value = state.swirl;
+    document.getElementById('petalsVal').textContent = state.petals;
+    document.getElementById('swirlVal').textContent = state.swirl;
+    document.querySelectorAll('.swatch').forEach(s => s.classList.remove('active'));
+    render();
+    buildPalette();
+  });
+
+  document.getElementById('downloadBtn').addEventListener('click', () => {
+    const serializer = new XMLSerializer();
+    const source = serializer.serializeToString(svg);
+    const blob = new Blob([source], { type: 'image/svg+xml' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'pookkalam.svg';
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  document.getElementById('stage').addEventListener('click', () => {
+    state.petals = state.petals >= 12 ? 6 : state.petals + 1;
+    petalsInput.value = state.petals;
+    document.getElementById('petalsVal').textContent = state.petals;
+    render();
+  });
+
+  buildPalette();
+  render();
+})();
+</script>
+</body>
+</html>
